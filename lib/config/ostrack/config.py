@@ -28,6 +28,9 @@ cfg.MODEL.BACKBONE.CLS_TOKEN_USE_MODE = 'ignore'
 cfg.MODEL.BACKBONE.CE_LOC = []
 cfg.MODEL.BACKBONE.CE_KEEP_RATIO = []
 cfg.MODEL.BACKBONE.CE_TEMPLATE_RANGE = 'ALL'  # choose between ALL, CTR_POINT, CTR_REC, GT_BOX
+cfg.MODEL.BACKBONE.UNIDIRECTIONAL = False  # LMTrack-style: block search→template attention
+cfg.MODEL.BACKBONE.TEMPLATE_PRUNE_RATIO = 0.0  # Fraction of template tokens to prune (0.4 = keep 60%)
+cfg.MODEL.BACKBONE.REF_POOL = False  # Enable TCM-style dynamic reference pool
 
 # MODEL.HEAD
 cfg.MODEL.HEAD = edict()
@@ -136,7 +139,9 @@ def _update_config(base_cfg, exp_cfg):
 
 def update_config_from_file(filename, base_cfg=None):
     exp_config = None
-    with open(filename) as f:
+    # explicit utf-8: default locale encoding (e.g. GBK on Windows) breaks on
+    # non-ASCII characters in yaml comments
+    with open(filename, encoding='utf-8') as f:
         exp_config = edict(yaml.safe_load(f))
         if base_cfg is not None:
             _update_config(base_cfg, exp_config)

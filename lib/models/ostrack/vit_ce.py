@@ -32,7 +32,7 @@ class VisionTransformerCE(VisionTransformer):
                  num_heads=12, mlp_ratio=4., qkv_bias=True, representation_size=None, distilled=False,
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0., embed_layer=PatchEmbed, norm_layer=None,
                  act_layer=None, weight_init='',
-                 ce_loc=None, ce_keep_ratio=None):
+                 ce_loc=None, ce_keep_ratio=None, unidirectional=False):
         """
         Args:
             img_size (int, tuple): input image size
@@ -91,26 +91,33 @@ class VisionTransformerCE(VisionTransformer):
                 CEBlock(
                     dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,
                     attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer, act_layer=act_layer,
-                    keep_ratio_search=ce_keep_ratio_i)
+                    keep_ratio_search=ce_keep_ratio_i, unidirectional=unidirectional)
             )
 
         self.blocks = nn.Sequential(*blocks)
         self.norm = norm_layer(embed_dim)
+        self.unidirectional = unidirectional
 
         self.init_weights(weight_init)
 
     def forward_features(self, z, x, mask_z=None, mask_x=None,
                          ce_template_mask=None, ce_keep_rate=None,
-                         return_last_attn=False
+                         return_last_attn=False,
+                         template_is_tokens=False
                          ):
         B, H, W = x.shape[0], x.shape[2], x.shape[3]
 
         x = self.patch_embed(x)
-        z = self.patch_embed(z)
+        if template_is_tokens:
+            # z must be block-0 input-space tokens: patch_embed(z) + pos_embed_z,
+            # cached by the tracker at initialization (NOT final-layer output features)
+            assert z.dim() == 3, 'template_is_tokens=True requires z to be [B, N, C]'
+        else:
+            z = self.patch_embed(z)
 
         # attention mask handling
         # B, H, W
-        if mask_z is not None and mask_x is not None:
+        if mask_z is not None and mask_x is not None and not template_is_tokens:
             mask_z = F.interpolate(mask_z[None].float(), scale_factor=1. / self.patch_size).to(torch.bool)[0]
             mask_z = mask_z.flatten(1).unsqueeze(-1)
 
@@ -124,7 +131,9 @@ class VisionTransformerCE(VisionTransformer):
             cls_tokens = self.cls_token.expand(B, -1, -1)
             cls_tokens = cls_tokens + self.cls_pos_embed
 
-        z += self.pos_embed_z
+        if not template_is_tokens:
+            z += self.pos_embed_z
+        # else: cached tokens already carry pos_embed_z
         x += self.pos_embed_x
 
         if self.add_sep_seg:
@@ -186,9 +195,11 @@ class VisionTransformerCE(VisionTransformer):
 
     def forward(self, z, x, ce_template_mask=None, ce_keep_rate=None,
                 tnc_keep_rate=None,
-                return_last_attn=False):
+                return_last_attn=False,
+                template_is_tokens=False):
 
-        x, aux_dict = self.forward_features(z, x, ce_template_mask=ce_template_mask, ce_keep_rate=ce_keep_rate,)
+        x, aux_dict = self.forward_features(z, x, ce_template_mask=ce_template_mask, ce_keep_rate=ce_keep_rate,
+                                            template_is_tokens=template_is_tokens)
 
         return x, aux_dict
 

@@ -30,23 +30,46 @@ class Attention(nn.Module):
                                                                           relative_position_index.max() + 1)))
             trunc_normal_(self.relative_position_bias_table, std=0.02)
 
-    def forward(self, x, mask=None, return_attention=False):
-        # x: B, N, C
-        # mask: [B, N, ] torch.bool
+    def forward(self, x, mask=None, return_attention=False, unidirectional_mask=None):
+        """Args:
+            x: [B, N, C] input tokens
+            mask: [B, N] bool mask for tokens to mask
+            return_attention: also return attention weights
+            unidirectional_mask: tuple (lens_t,) — if given, block template→search
+                attention so information only flows template→search (LMTrack-style)
+        """
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
-        q, k, v = qkv.unbind(0)   # make torchscript happy (cannot use tensor as tuple)
+        q, k, v = qkv.unbind(0)
 
-        attn = (q @ k.transpose(-2, -1)) * self.scale
+        attn_raw = (q @ k.transpose(-2, -1)) * self.scale
 
         if self.rpe:
             relative_position_bias = self.relative_position_bias_table[:, self.relative_position_index].unsqueeze(0)
-            attn += relative_position_bias
+            attn_raw += relative_position_bias
 
         if mask is not None:
-            attn = attn.masked_fill(mask.unsqueeze(1).unsqueeze(2), float('-inf'),)
+            attn_raw = attn_raw.masked_fill(mask.unsqueeze(1).unsqueeze(2), float('-inf'),)
 
-        attn = attn.softmax(dim=-1)
+        # ── Unidirectional Mask (LMTrack-style) ─────────────────────────────
+        # Block TEMPLATE→search attention: template rows cannot read search
+        # columns, keeping template features clean, while search tokens still
+        # attend to the template (that flow carries the target reference the
+        # prediction head depends on — blocking it collapses tracking).
+        # -inf so the softmax weight is exactly 0 (0-fill would NOT block:
+        # exp(0)=1 still contributes after normalization).
+        # CE scores search tokens via attn[:, :, :lens_t, lens_t:], exactly the
+        # masked block, so CE must read the UNMASKED softmax to keep candidate
+        # elimination identical to how the model was trained.
+        if unidirectional_mask is not None:
+            lens_t = unidirectional_mask[0]
+            attn_unmasked = attn_raw.softmax(dim=-1) if return_attention else None
+            attn_raw[:, :, :lens_t, lens_t:] = float('-inf')
+        else:
+            attn_unmasked = None
+        # ─────────────────────────────────────────────────────────────────
+
+        attn = attn_raw.softmax(dim=-1)
         attn = self.attn_drop(attn)
 
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
@@ -54,7 +77,7 @@ class Attention(nn.Module):
         x = self.proj_drop(x)
 
         if return_attention:
-            return x, attn
+            return x, attn_unmasked if attn_unmasked is not None else attn
         else:
             return x
 

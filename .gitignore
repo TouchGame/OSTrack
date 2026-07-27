@@ -168,3 +168,9 @@ pytracking/tracking_results/
 pytracking/result_plots/
 pytracking/evaluation/local.py
 pytracking/run_local.py
+
+# 图片压缩包权重文件
+\*.jpg
+\*.png
+\*.zip
+\*.pth

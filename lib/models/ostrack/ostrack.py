@@ -42,11 +42,14 @@ class OSTrack(nn.Module):
                 ce_template_mask=None,
                 ce_keep_rate=None,
                 return_last_attn=False,
+                template_is_tokens=False,
                 ):
         x, aux_dict = self.backbone(z=template, x=search,
                                     ce_template_mask=ce_template_mask,
                                     ce_keep_rate=ce_keep_rate,
-                                    return_last_attn=return_last_attn, )
+                                    return_last_attn=return_last_attn,
+                                    template_is_tokens=template_is_tokens,
+                                    )
 
         # Forward head
         feat_last = x
@@ -92,13 +95,18 @@ class OSTrack(nn.Module):
             raise NotImplementedError
 
 
-def build_ostrack(cfg, training=True):
+def build_ostrack(cfg, training=True, unidirectional=None):
     current_dir = os.path.dirname(os.path.abspath(__file__))  # This is your Project Root
     pretrained_path = os.path.join(current_dir, '../../../pretrained_models')
     if cfg.MODEL.PRETRAIN_FILE and ('OSTrack' not in cfg.MODEL.PRETRAIN_FILE) and training:
         pretrained = os.path.join(pretrained_path, cfg.MODEL.PRETRAIN_FILE)
     else:
         pretrained = ''
+
+    # Read from config unless explicitly overridden, so training and testing
+    # build the backbone the same way.
+    if unidirectional is None:
+        unidirectional = getattr(cfg.MODEL.BACKBONE, 'UNIDIRECTIONAL', False)
 
     if cfg.MODEL.BACKBONE.TYPE == 'vit_base_patch16_224':
         backbone = vit_base_patch16_224(pretrained, drop_path_rate=cfg.TRAIN.DROP_PATH_RATE)
@@ -109,6 +117,7 @@ def build_ostrack(cfg, training=True):
         backbone = vit_base_patch16_224_ce(pretrained, drop_path_rate=cfg.TRAIN.DROP_PATH_RATE,
                                            ce_loc=cfg.MODEL.BACKBONE.CE_LOC,
                                            ce_keep_ratio=cfg.MODEL.BACKBONE.CE_KEEP_RATIO,
+                                           unidirectional=unidirectional,
                                            )
         hidden_dim = backbone.embed_dim
         patch_start_index = 1
@@ -117,6 +126,7 @@ def build_ostrack(cfg, training=True):
         backbone = vit_large_patch16_224_ce(pretrained, drop_path_rate=cfg.TRAIN.DROP_PATH_RATE,
                                             ce_loc=cfg.MODEL.BACKBONE.CE_LOC,
                                             ce_keep_ratio=cfg.MODEL.BACKBONE.CE_KEEP_RATIO,
+                                            unidirectional=unidirectional,
                                             )
 
         hidden_dim = backbone.embed_dim
