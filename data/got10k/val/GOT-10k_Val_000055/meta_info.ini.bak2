@@ -1,0 +1,11 @@
+[METAINFO]
+url: https://youtu.be/u_ADAx_lTIQ
+begin: 00:01:21
+end: 00:01:28
+anno_fps: 10Hz
+object_class: luge
+motion_class: running
+major_class: vehicle
+root_class: vehicle
+motion_adverb: fast
+resolution: (1920, 1080)

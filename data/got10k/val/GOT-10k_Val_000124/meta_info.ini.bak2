@@ -1,0 +1,11 @@
+[METAINFO]
+url: https://youtu.be/zRLNIg3Fjng
+begin: 00:00:01
+end: 00:00:19
+anno_fps: 10Hz
+object_class: airship
+motion_class: flying
+major_class: aircraft
+root_class: vehicle
+motion_adverb: slowly
+resolution: (1920, 1080)

@@ -1,0 +1,11 @@
+[METAINFO]
+url: https://youtu.be/GCc2SIYjDCM
+begin: 00:03:36
+end: 00:03:45
+anno_fps: 10Hz
+object_class: bicycle wheel
+motion_class: running
+major_class: object part
+root_class: passive motion object
+motion_adverb: fast
+resolution: (1280, 720)

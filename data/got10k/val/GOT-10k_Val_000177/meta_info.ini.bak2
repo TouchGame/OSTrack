@@ -1,0 +1,11 @@
+[METAINFO]
+url: https://youtu.be/9Jzt4Tjnnso
+begin: 00:01:12
+end: 00:01:30
+anno_fps: 10Hz
+object_class: dragon-lion dance
+motion_class: dragon-lion dance
+major_class: others
+root_class: passive motion object
+motion_adverb: unknown
+resolution: (3840, 2160)

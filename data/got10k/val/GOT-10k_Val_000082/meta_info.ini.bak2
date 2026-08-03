@@ -1,0 +1,11 @@
+[METAINFO]
+url: https://youtu.be/91RT3y2ROQg
+begin: 00:00:17
+end: 00:00:25
+anno_fps: 10Hz
+object_class: longwool
+motion_class: running
+major_class: animal
+root_class: animal
+motion_adverb: fast
+resolution: (1280, 720)

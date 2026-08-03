@@ -1,0 +1,11 @@
+[METAINFO]
+url: https://youtu.be/AMmRmMwEmSA
+begin: 00:00:40
+end: 00:00:50
+anno_fps: 10Hz
+object_class: tasmanian devil
+motion_class: running
+major_class: marsupial
+root_class: animal
+motion_adverb: fast
+resolution: (1920, 1080)

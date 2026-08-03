@@ -1,0 +1,11 @@
+[METAINFO]
+url: https://youtu.be/B5Lov6zTGq0
+begin: 00:03:39
+end: 00:04:00
+anno_fps: 10Hz
+object_class: ballon
+motion_class: flying
+major_class: others
+root_class: others
+motion_adverb: slowly
+resolution: (1920, 1080)
